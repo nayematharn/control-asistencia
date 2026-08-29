@@ -1,18 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Control de Asistencia</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .contenedor {
+      width: 90%;
+      max-width: 450px;
+      background: white;
+      padding: 30px;
+      border-radius: 18px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .estado {
+      margin: 20px 0;
+      padding: 15px;
+      border-radius: 10px;
+      background: #f1f1f1;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      background: #1a73e8;
+      color: white;
+      font-size: 17px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
+
+    .error {
+      color: #c62828;
+      font-weight: bold;
+    }
+
+    .exito {
+      color: #188038;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="contenedor">
+
+    <h1>📍 Control de Asistencia</h1>
+
+    <p>Verificando tu ubicación...</p>
+
+    <div id="estado" class="estado">
+      Esperando GPS...
+    </div>
+
+    <button id="botonFormulario" onclick="irAlFormulario()" disabled>
+      CONTINUAR AL FORMULARIO
+    </button>
+
+  </div>
+
+
+<script>
+
+  // ==============================
+  // UBICACIONES AUTORIZADAS
+  // ==============================
+
+  const ubicaciones = {
+
+    PLANTA: {
+      lat: -13.785091,
+      lon: -76.168169
+    },
+
+    TALLER: {
+      lat: -13.7243830,
+      lon: -76.2012443
+    }
+
+  };
+
+
+  // Radio permitido en metros
+  const RADIO_PERMITIDO = 200;
+
+
+  // Área detectada
+  let area = "";
+
+
+  // ==============================
+  // CALCULAR DISTANCIA
+  // ==============================
+
+  function calcularDistancia(lat1, lon1, lat2, lon2) {
+
+    const R = 6371000;
+
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) *
+      Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c =
+      2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  }
+
+
+  // ==============================
+  // VERIFICAR UBICACIÓN
+  // ==============================
+
+  function verificarUbicacion() {
+
+    const estado = document.getElementById("estado");
+    const boton = document.getElementById("botonFormulario");
+
+
+    if (!navigator.geolocation) {
+
+      estado.innerHTML =
+        "❌ Tu dispositivo no permite obtener la ubicación.";
+
+      estado.className = "estado error";
+
+      return;
+    }
+
+
+    navigator.geolocation.getCurrentPosition(
+
+      function(position) {
+
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+
+        // Distancia a PLANTA
+        const distanciaPlanta =
+          calcularDistancia(
+            lat,
+            lon,
+            ubicaciones.PLANTA.lat,
+            ubicaciones.PLANTA.lon
+          );
+
+
+        // Distancia a TALLER
+        const distanciaTaller =
+          calcularDistancia(
+            lat,
+            lon,
+            ubicaciones.TALLER.lat,
+            ubicaciones.TALLER.lon
+          );
+
+
+        // ==============================
+        // DETERMINAR ÁREA
+        // ==============================
+
+        if (distanciaPlanta <= RADIO_PERMITIDO) {
+
+          area = "PLANTA";
+
+          estado.innerHTML =
+            "✅ Ubicación autorizada<br><br>" +
+            "<strong>ÁREA: PLANTA</strong>";
+
+          estado.className = "estado exito";
+
+          boton.disabled = false;
+
+        }
+
+        else if (distanciaTaller <= RADIO_PERMITIDO) {
+
+          area = "TALLER";
+
+          estado.innerHTML =
+            "✅ Ubicación autorizada<br><br>" +
+            "<strong>ÁREA: TALLER</strong>";
+
+          estado.className = "estado exito";
+
+          boton.disabled = false;
+
+        }
+
+        else {
+
+          area = "";
+
+          estado.innerHTML =
+            "❌ No estás dentro de una ubicación autorizada.<br><br>" +
+            "Acércate a PLANTA o TALLER.";
+
+          estado.className = "estado error";
+
+          boton.disabled = true;
+
+        }
+
+      },
+
+
+      function(error) {
+
+        estado.innerHTML =
+          "❌ No se pudo obtener tu ubicación.<br><br>" +
+          "Activa el GPS y permite el acceso a la ubicación.";
+
+        estado.className = "estado error";
+
+      },
+
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
+      }
+
+    );
+
+  }
+
+
   // ==============================
   // IR AL FORMULARIO
   // ==============================
 
   function irAlFormulario() {
 
-    /*
-      AQUÍ COLOCAREMOS EL ENLACE
-      DE TU FORMULARIO.
-    */
+    if (!area) {
 
- window.location.href =
-    "https://script.google.com/macros/s/AKfycbz3WkmCpyq9BS30NTo4J57x80N6XcTSySRh1OEggIstpOQAHxJziMUlPJdJPCfKZJJXmg/exec?area=" + area;
+      alert("Primero debes validar tu ubicación.");
 
-}
+      return;
+    }
+
+
+    window.location.href =
+      "https://script.google.com/macros/s/AKfycbz3WkmCpyq9BS30NTo4J57x80N6XcTSySRh1OEggIstpOQAHxJziMUlPJdJPCfKZJJXmg/exec?area=" + area;
+
+  }
+
+
+  // ==============================
+  // INICIAR
+  // ==============================
+
+  verificarUbicacion();
 
 </script>
 
