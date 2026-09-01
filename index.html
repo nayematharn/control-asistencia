@@ -47,6 +47,7 @@
       color: white;
       font-size: 17px;
       cursor: pointer;
+      margin-top: 10px;
     }
 
     button:disabled {
@@ -72,13 +73,22 @@
 
     <h1>📍 Control de Asistencia</h1>
 
-    <p>Verificando tu ubicación...</p>
+    <p id="mensaje">
+      Presiona el botón para verificar tu ubicación.
+    </p>
 
     <div id="estado" class="estado">
-      Esperando GPS...
+      Esperando verificación...
     </div>
 
-    <button id="botonFormulario" onclick="irAlFormulario()" disabled>
+    <button id="botonGPS" onclick="verificarUbicacion()">
+      📍 VERIFICAR UBICACIÓN
+    </button>
+
+    <button id="botonFormulario"
+            onclick="irAlFormulario()"
+            disabled
+            style="display:none;">
       CONTINUAR AL FORMULARIO
     </button>
 
@@ -87,9 +97,9 @@
 
 <script>
 
-  // ==============================
+  // ==========================================
   // UBICACIONES AUTORIZADAS
-  // ==============================
+  // ==========================================
 
   const ubicaciones = {
 
@@ -106,7 +116,10 @@
   };
 
 
-  // Radio permitido en metros
+  // ==========================================
+  // RADIO PERMITIDO
+  // ==========================================
+
   const RADIO_PERMITIDO = 200;
 
 
@@ -114,9 +127,9 @@
   let area = "";
 
 
-  // ==============================
+  // ==========================================
   // CALCULAR DISTANCIA
-  // ==============================
+  // ==========================================
 
   function calcularDistancia(lat1, lon1, lat2, lon2) {
 
@@ -138,26 +151,51 @@
   }
 
 
-  // ==============================
+  // ==========================================
   // VERIFICAR UBICACIÓN
-  // ==============================
+  // ==========================================
 
   function verificarUbicacion() {
 
     const estado = document.getElementById("estado");
-    const boton = document.getElementById("botonFormulario");
+    const mensaje = document.getElementById("mensaje");
+    const botonGPS = document.getElementById("botonGPS");
+    const botonFormulario =
+      document.getElementById("botonFormulario");
 
+
+    area = "";
+
+
+    // Verificar soporte GPS
 
     if (!navigator.geolocation) {
 
       estado.innerHTML =
-        "❌ Tu dispositivo no permite obtener la ubicación.";
+        "❌ Este celular no permite obtener la ubicación.";
 
       estado.className = "estado error";
 
       return;
     }
 
+
+    // Cambiar pantalla
+
+    mensaje.innerHTML =
+      "📍 Estamos obteniendo tu ubicación...";
+
+    estado.innerHTML =
+      "⏳ Esperando GPS del celular...";
+
+    estado.className = "estado";
+
+    botonGPS.disabled = true;
+
+
+    // ==========================================
+    // SOLICITAR GPS
+    // ==========================================
 
     navigator.geolocation.getCurrentPosition(
 
@@ -167,7 +205,12 @@
         const lon = position.coords.longitude;
 
 
+        console.log("LATITUD:", lat);
+        console.log("LONGITUD:", lon);
+
+
         // Distancia a PLANTA
+
         const distanciaPlanta =
           calcularDistancia(
             lat,
@@ -178,6 +221,7 @@
 
 
         // Distancia a TALLER
+
         const distanciaTaller =
           calcularDistancia(
             lat,
@@ -187,9 +231,20 @@
           );
 
 
-        // ==============================
-        // DETERMINAR ÁREA
-        // ==============================
+        console.log(
+          "Distancia PLANTA:",
+          distanciaPlanta
+        );
+
+        console.log(
+          "Distancia TALLER:",
+          distanciaTaller
+        );
+
+
+        // ==========================================
+        // PLANTA
+        // ==========================================
 
         if (distanciaPlanta <= RADIO_PERMITIDO) {
 
@@ -197,58 +252,136 @@
 
           estado.innerHTML =
             "✅ Ubicación autorizada<br><br>" +
-            "<strong>ÁREA: PLANTA</strong>";
+            "<strong>ÁREA: PLANTA</strong><br><br>" +
+            "Distancia: " +
+            Math.round(distanciaPlanta) +
+            " metros";
 
           estado.className = "estado exito";
 
-          boton.disabled = false;
+          mensaje.innerHTML =
+            "Ubicación verificada correctamente.";
 
+          botonGPS.style.display = "none";
+
+          botonFormulario.style.display = "block";
+
+          botonFormulario.disabled = false;
+
+          return;
         }
 
-        else if (distanciaTaller <= RADIO_PERMITIDO) {
+
+        // ==========================================
+        // TALLER
+        // ==========================================
+
+        if (distanciaTaller <= RADIO_PERMITIDO) {
 
           area = "TALLER";
 
           estado.innerHTML =
             "✅ Ubicación autorizada<br><br>" +
-            "<strong>ÁREA: TALLER</strong>";
+            "<strong>ÁREA: TALLER</strong><br><br>" +
+            "Distancia: " +
+            Math.round(distanciaTaller) +
+            " metros";
 
           estado.className = "estado exito";
 
-          boton.disabled = false;
+          mensaje.innerHTML =
+            "Ubicación verificada correctamente.";
+
+          botonGPS.style.display = "none";
+
+          botonFormulario.style.display = "block";
+
+          botonFormulario.disabled = false;
+
+          return;
+        }
+
+
+        // ==========================================
+        // FUERA DE LAS ÁREAS
+        // ==========================================
+
+        estado.innerHTML =
+          "❌ No estás dentro de una ubicación autorizada.<br><br>" +
+          "Acércate a PLANTA o TALLER.";
+
+        estado.className = "estado error";
+
+        mensaje.innerHTML =
+          "No se pudo validar tu ubicación.";
+
+        botonGPS.disabled = false;
+
+      },
+
+
+      // ==========================================
+      // ERROR GPS
+      // ==========================================
+
+      function(error) {
+
+        console.log("ERROR GPS:", error);
+
+        let mensajeError = "";
+
+        if (error.code === 1) {
+
+          mensajeError =
+            "❌ Permiso de ubicación rechazado.<br><br>" +
+            "Debes permitir el acceso a tu ubicación.";
+
+        }
+
+        else if (error.code === 2) {
+
+          mensajeError =
+            "❌ No se pudo determinar tu ubicación.<br><br>" +
+            "Activa el GPS del celular e inténtalo nuevamente.";
+
+        }
+
+        else if (error.code === 3) {
+
+          mensajeError =
+            "⏱️ La ubicación tardó demasiado.<br><br>" +
+            "Activa el GPS y vuelve a intentarlo.";
 
         }
 
         else {
 
-          area = "";
-
-          estado.innerHTML =
-            "❌ No estás dentro de una ubicación autorizada.<br><br>" +
-            "Acércate a PLANTA o TALLER.";
-
-          estado.className = "estado error";
-
-          boton.disabled = true;
+          mensajeError =
+            "❌ No se pudo obtener tu ubicación.<br><br>" +
+            "Activa el GPS y permite el acceso a la ubicación.";
 
         }
 
-      },
 
-
-      function(error) {
-
-        estado.innerHTML =
-          "❌ No se pudo obtener tu ubicación.<br><br>" +
-          "Activa el GPS y permite el acceso a la ubicación.";
+        estado.innerHTML = mensajeError;
 
         estado.className = "estado error";
 
+        mensaje.innerHTML =
+          "No se pudo verificar la ubicación.";
+
+        botonGPS.disabled = false;
+
       },
+
+
+      // ==========================================
+      // CONFIGURACIÓN GPS
+      // ==========================================
 
       {
         enableHighAccuracy: true,
-        timeout: 15000,
+        timeout: 30000,
         maximumAge: 0
       }
 
@@ -257,31 +390,27 @@
   }
 
 
-  // ==============================
+  // ==========================================
   // IR AL FORMULARIO
-  // ==============================
+  // ==========================================
 
   function irAlFormulario() {
 
     if (!area) {
 
-      alert("Primero debes validar tu ubicación.");
+      alert(
+        "Primero debes verificar tu ubicación."
+      );
 
       return;
     }
 
 
     window.location.href =
-      "https://script.google.com/macros/s/AKfycbz3WkmCpyq9BS30NTo4J57x80N6XcTSySRh1OEggIstpOQAHxJziMUlPJdJPCfKZJJXmg/exec?area=" + area;
+      "https://script.google.com/macros/s/AKfycbz3WkmCpyq9BS30NTo4J57x80N6XcTSySRh1OEggIstpOQAHxJziMUlPJdJPCfKZJJXmg/exec?area="
+      + area;
 
   }
-
-
-  // ==============================
-  // INICIAR
-  // ==============================
-
-  verificarUbicacion();
 
 </script>
 
