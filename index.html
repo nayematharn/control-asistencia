@@ -121,11 +121,15 @@ const CONFIG = {
 // DETECTAR ÁREA DESDE EL ENLACE
 // ==========================================
 
-const parametros =
-  new URLSearchParams(window.location.search);
 
-const area =
-  (parametros.get("area") || "").toUpperCase();
+const parametros = new URLSearchParams(window.location.search);
+
+const area = (parametros.get("area") || "").trim().toUpperCase();
+
+console.log("URL:", window.location.href);
+console.log("Parámetro area:", parametros.get("area"));
+console.log("Área detectada:", area);
+
 
 
 // ==========================================
